@@ -1,0 +1,10 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "prowe-material-market"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-9k9zwqsha4fo"
+s3_prefix = "prowe-material-market"
+region = "us-east-1"
+capabilities = "CAPABILITY_IAM"
+image_repositories = []
