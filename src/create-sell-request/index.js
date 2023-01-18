@@ -5,11 +5,9 @@ import { randomUUID } from 'crypto';
 const dynamoDBClient = new DynamoDBClient({});
 const documentClient = DynamoDBDocument.from(dynamoDBClient);
 
-const ZEROS = new Array(32).fill(0).join('');
-
 function leftPadPricePerUnit(pricePerUnit) {
   // since we are using string concatination, we want to left pad this so that we get a sortable string
-  return (ZEROS + pricePerUnit.toString(16)).slice(-32);
+  return ('0000' + pricePerUnit.toString(16)).slice(-4);
 }
 
 function buildItemForRequest({material, quantity, pricePerUnit}) {
