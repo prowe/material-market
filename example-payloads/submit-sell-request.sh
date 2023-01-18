@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set +e
+set -e
 
 PAYLOAD_FILE=$1
 FUNCTION_URL=$(aws cloudformation describe-stacks \
