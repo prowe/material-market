@@ -7,7 +7,7 @@ const documentClient = DynamoDBDocument.from(dynamoDBClient);
 
 function leftPadPricePerUnit(pricePerUnit) {
   // since we are using string concatination, we want to left pad this so that we get a sortable string
-  return pricePerUnit.toFixed(0).padStart(9);
+  return pricePerUnit.toFixed(0).padStart(9, '0');
 }
 
 function buildItemForRequest({material, quantity, pricePerUnit}) {
