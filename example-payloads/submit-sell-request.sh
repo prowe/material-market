@@ -9,4 +9,7 @@ FUNCTION_URL=$(aws cloudformation describe-stacks \
     --output=text)
 
 echo "Submitting ${PAYLOAD_FILE} to ${FUNCTION_URL}"
-curl -X POST -d @${PAYLOAD_FILE} --url $FUNCTION_URL
+cat $PAYLOAD_FILE | curl -X POST \
+    -H "Content-Type: application/json" \
+    -d @- \
+    --url $FUNCTION_URL

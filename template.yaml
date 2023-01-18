@@ -22,7 +22,7 @@ Resources:
       Description: !Sub
         - Stack ${AWS::StackName} Function ${ResourceName}
         - ResourceName: CreateSellRequestFunction
-      CodeUri: src/CreateSellRequest
+      CodeUri: src/create-sell-request
       Handler: index.handler
       Runtime: nodejs18.x
       MemorySize: 3008
