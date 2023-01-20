@@ -136,10 +136,26 @@ Resources:
           SELL_REQUESTS_TABLE_NAME: !Ref SellRequests
           BUY_REQUESTS_TABLE_NAME: !Ref BuyRequests
       Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref SellRequests
-        - DynamoDBCrudPolicy:
-            TableName: !Ref BuyRequests
+        - Statement:
+            - Sid: SSMDescribeParametersPolicy
+              Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:Query
+                - dynamodb:Scan
+                - dynamodb:BatchGetItem
+                - dynamodb:ConditionCheckItem
+                - dynamodb:PartiQLSelect
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+                - dynamodb:BatchWriteItem
+                - dynamodb:PartiQLDelete
+                - dynamodb:PartiQLInsert
+                - dynamodb:PartiQLUpdate
+              Resource:
+                - !GetAtt SellRequests.Arn
+                - !GetAtt BuyRequests.Arn
       Events:
         PartitionedBuyRequests:
           Type: Kinesis

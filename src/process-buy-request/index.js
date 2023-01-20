@@ -56,7 +56,7 @@ async function findBestPriceSellRequestForMaterial(material, maxPricePerUnit) {
  * @returns boolean
  */
 function isBuyRequestFulfilled(request) {
-  return request.quantity > request.filledQuantity;
+  return request.quantity <= request.filledQuantity;
 }
 
 /**
@@ -70,15 +70,47 @@ async function processRecord(record) {
     return;
   }
   if (isBuyRequestFulfilled(buyRequest)) {
+    console.warn("Request is fulfilled");
     return;
   }
   const bestPriceSellRequest = await findBestPriceSellRequestForMaterial(buyRequest.material, buyRequest.pricePerUnit);
   if (!bestPriceSellRequest) {
     console.warn("Cannot find any sellers");
+    return;
   }
   console.log("Best price: ", JSON.stringify(bestPriceSellRequest));
 
   // compare prices, decrement things
+  const askedQuantity = buyRequest.quantity - buyRequest.filledQuantity;
+  const claimedQuantity = Math.min(askedQuantity, bestPriceSellRequest?.quantity);
+  const sellExausted = bestPriceSellRequest.quantity === claimedQuantity;
+  const totalPrice = claimedQuantity * bestPriceSellRequest.pricePerUnit;
+
+  await documentClient.executeTransaction({
+    TransactStatements: [
+      {
+        Statement: `
+          UPDATE "${process.env.BUY_REQUESTS_TABLE_NAME}" 
+          SET filledQuantity = filledQuantity + ?
+          SET filledTotalCost = filledTotalCost + ?
+          WHERE id = ?`,
+        Parameters: [claimedQuantity, totalPrice, buyRequest.id]
+      },
+      (sellExausted ?
+        {
+          Statement: `
+            DELETE FROM "${process.env.SELL_REQUESTS_TABLE_NAME}" 
+            WHERE id = ?`,
+          Parameters: [bestPriceSellRequest.id]
+        } : {
+          Statement: `
+            UPDATE "${process.env.SELL_REQUESTS_TABLE_NAME}" 
+            SET quantity = quantity - ?
+            WHERE id = ?`,
+          Parameters: [claimedQuantity, bestPriceSellRequest.id]
+      })
+    ]
+  });
 }
 
 /**
