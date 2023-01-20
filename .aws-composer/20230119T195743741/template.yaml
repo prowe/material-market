@@ -93,7 +93,7 @@ Resources:
       Target: !GetAtt PartitionedBuyRequests.Arn
       TargetParameters:
         KinesisStreamParameters:
-          PartitionKey: $.dynamodb.NewImage.material.S
+          PartitionKey: TODO
   PartitionedBuyRequests:
     Type: AWS::Kinesis::Stream
     Properties:
@@ -121,37 +121,6 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub /aws/lambda/${CreateBuyRequestFunction}
-  ProcessBuyRequestFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Description: !Sub Processes buy requests into the available sales
-      CodeUri: src/process-buy-request
-      Handler: index.handler
-      Runtime: nodejs18.x
-      MemorySize: 3008
-      Timeout: 30
-      Tracing: Active
-      Environment:
-        Variables:
-          SELL_REQUESTS_TABLE_NAME: !Ref SellRequests
-          BUY_REQUESTS_TABLE_NAME: !Ref BuyRequests
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref SellRequests
-        - DynamoDBCrudPolicy:
-            TableName: !Ref BuyRequests
-      Events:
-        PartitionedBuyRequests:
-          Type: Kinesis
-          Properties:
-            Stream: !GetAtt PartitionedBuyRequests.Arn
-            StartingPosition: TRIM_HORIZON
-            BatchSize: 1
-  ProcessBuyRequestFunctionLogGroup:
-    Type: AWS::Logs::LogGroup
-    DeletionPolicy: Retain
-    Properties:
-      LogGroupName: !Sub /aws/lambda/${ProcessBuyRequestFunction}
 Outputs:
   CreateSellRequestUrl:
     Value: !GetAtt CreateSellRequestFunctionUrl.FunctionUrl

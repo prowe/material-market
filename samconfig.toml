@@ -1,6 +1,7 @@
 version = 0.1
-[default]
-[default.deploy]
+[default.global.parameters]
+stack_name = "prowe-material-market"
+
 [default.deploy.parameters]
 stack_name = "prowe-material-market"
 s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-9k9zwqsha4fo"
