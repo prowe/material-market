@@ -13,7 +13,7 @@ function buildItemForRequest({material, quantity, pricePerUnit}) {
     pricePerUnit,
     filledQuantity: 0,
     filledTotalCost: 0,
-  }
+  };
 }
 
 export async function handler(event) {

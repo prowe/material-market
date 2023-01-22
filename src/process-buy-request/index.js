@@ -1,4 +1,5 @@
 // @ts-check
+
 /**
  * @typedef { import("aws-lambda").KinesisStreamRecord } KinesisStreamRecord
  * @typedef { import("aws-lambda").KinesisStreamEvent } KinesisStreamEvent
@@ -12,7 +13,7 @@ const dynamoDBClient = new DynamoDBClient({});
 const documentClient = DynamoDBDocument.from(dynamoDBClient);
 
 /**
- * Convert the kindesis stream record into the original Buy Request
+ * Convert the kinesis stream record into the original Buy Request
  * @param {KinesisStreamRecord} record 
  * @returns {import("../..").BuyRequestItem?}
  */
