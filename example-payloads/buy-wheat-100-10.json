@@ -1,4 +1,5 @@
 {
+    "type": "Buy",
     "material": "wheat",
     "quantity": 100,
     "pricePerUnit": 10

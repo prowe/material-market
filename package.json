@@ -1,0 +1,25 @@
+{
+  "name": "material-market",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "vitest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/prowe/material-market.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "types": "./index.d.ts",
+  "bugs": {
+    "url": "https://github.com/prowe/material-market/issues"
+  },
+  "homepage": "https://github.com/prowe/material-market#readme",
+  "devDependencies": {
+    "vitest": "^0.27.3"
+  }
+}

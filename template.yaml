@@ -1,6 +1,8 @@
-Transform: AWS::Serverless-2016-10-31
+Transform: 
+  - AWS::LanguageExtensions
+  - AWS::Serverless-2016-10-31
 Resources:
-  SellRequests:
+  OpenOrders:
     Type: AWS::DynamoDB::Table
     Properties:
       AttributeDefinitions:
@@ -16,11 +18,11 @@ Resources:
           KeyType: RANGE
       StreamSpecification:
         StreamViewType: NEW_AND_OLD_IMAGES
-  CreateSellRequestFunction:
+  CreateOpenOrderFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Description: !Sub Accepts sell HTTP requests and stores them into the ${SellRequests} table
-      CodeUri: src/create-sell-request
+      Description: !Sub Accepts order HTTP requests and stores them into the ${OpenOrders} table
+      CodeUri: src/create-open-order
       Handler: index.handler
       Runtime: nodejs18.x
       MemorySize: 256
@@ -28,29 +30,17 @@ Resources:
       Tracing: Active
       Environment:
         Variables:
-          TABLE_NAME: !Ref SellRequests
+          TABLE_NAME: !Ref OpenOrders
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref SellRequests
+            TableName: !Ref OpenOrders
       FunctionUrlConfig:
         AuthType: NONE
-  CreateSellRequestFunctionLogGroup:
+  CreateOpenOrderFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /aws/lambda/${CreateSellRequestFunction}
-  BuyRequests:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      AttributeDefinitions:
-        - AttributeName: id
-          AttributeType: S
-      BillingMode: PAY_PER_REQUEST
-      KeySchema:
-        - AttributeName: id
-          KeyType: HASH
-      StreamSpecification:
-        StreamViewType: NEW_AND_OLD_IMAGES
-  ForwardBuyRequestRole:
+      LogGroupName: !Sub /aws/lambda/${CreateOpenOrderFunction}
+  ForwardOpenOrdersRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -72,7 +62,7 @@ Resources:
                   - dynamodb:GetRecords
                   - dynamodb:GetShardIterator
                   - dynamodb:ListStreams
-                Resource: !GetAtt BuyRequests.StreamArn
+                Resource: !GetAtt OpenOrders.StreamArn
               - Sid: putevents
                 Effect: Allow
                 Action:
@@ -80,61 +70,47 @@ Resources:
                   - kinesis:PutRecords
                   - kinesis:DescribeStream
                   - kinesis:DescribeLimits
-                Resource: !GetAtt PartitionedBuyRequests.Arn
-  ForwardBuyRequest:
+                Resource: !GetAtt PartitionedOpenOrders.Arn
+  ForwardOpenOrders:
     Type: AWS::Pipes::Pipe
     Properties:
-      Description: Forward buy request changes into the partition stream
-      RoleArn: !GetAtt ForwardBuyRequestRole.Arn
-      Source: !GetAtt BuyRequests.StreamArn
+      Description: Forward open order changes into the partitioned stream
+      RoleArn: !GetAtt ForwardOpenOrdersRole.Arn
+      Source: !GetAtt OpenOrders.StreamArn
       SourceParameters:
         DynamoDBStreamParameters:
           StartingPosition: TRIM_HORIZON
-      Target: !GetAtt PartitionedBuyRequests.Arn
+        FilterCriteria:
+          Filters:
+            - Pattern:
+                Fn::ToJsonString:
+                  data:
+                    dynamodb:
+                      NewImage: 
+                        material:
+                          S: [{ "exists": true }]
+      Target: !GetAtt PartitionedOpenOrders.Arn
       TargetParameters:
         KinesisStreamParameters:
           PartitionKey: $.dynamodb.NewImage.material.S
-  PartitionedBuyRequests:
+  PartitionedOpenOrders:
     Type: AWS::Kinesis::Stream
     Properties:
       StreamModeDetails:
         StreamMode: ON_DEMAND
-  CreateBuyRequestFunction:
+  ProcessOpenOrdersFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Description: !Sub Accepts HTTP buy requests and stores them in ${BuyRequests}
-      CodeUri: src/create-buy-request
+      Description: Processes partitioned open orders
+      CodeUri: src/process-order
       Handler: index.handler
       Runtime: nodejs18.x
-      MemorySize: 3008
+      MemorySize: 256
       Timeout: 30
       Tracing: Active
       Environment:
         Variables:
-          TABLE_NAME: !Ref BuyRequests
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref BuyRequests
-      FunctionUrlConfig:
-        AuthType: NONE
-  CreateBuyRequestFunctionLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub /aws/lambda/${CreateBuyRequestFunction}
-  ProcessBuyRequestFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Description: !Sub Processes buy requests into the available sales
-      CodeUri: src/process-buy-request
-      Handler: index.handler
-      Runtime: nodejs18.x
-      MemorySize: 3008
-      Timeout: 30
-      Tracing: Active
-      Environment:
-        Variables:
-          SELL_REQUESTS_TABLE_NAME: !Ref SellRequests
-          BUY_REQUESTS_TABLE_NAME: !Ref BuyRequests
+          TABLE_NAME: !Ref OpenOrders
       Policies:
         - Statement:
             - Sid: SSMDescribeParametersPolicy
@@ -154,31 +130,18 @@ Resources:
                 - dynamodb:PartiQLInsert
                 - dynamodb:PartiQLUpdate
               Resource:
-                - !GetAtt SellRequests.Arn
-                - !GetAtt BuyRequests.Arn
+                - !GetAtt OpenOrders.Arn
       Events:
-        PartitionedBuyRequests:
+        PartitionedOpenOrders:
           Type: Kinesis
           Properties:
-            Stream: !GetAtt PartitionedBuyRequests.Arn
+            Stream: !GetAtt PartitionedOpenOrders.Arn
             StartingPosition: TRIM_HORIZON
             BatchSize: 1
-  ProcessBuyRequestFunctionLogGroup:
+  ProcessOpenOrdersFunctionLogGroup:
     Type: AWS::Logs::LogGroup
-    DeletionPolicy: Retain
     Properties:
-      LogGroupName: !Sub /aws/lambda/${ProcessBuyRequestFunction}
+      LogGroupName: !Sub /aws/lambda/${ProcessOpenOrdersFunction}
 Outputs:
-  CreateSellRequestUrl:
-    Value: !GetAtt CreateSellRequestFunctionUrl.FunctionUrl
-  CreateBuyRequestUrl:
-    Value: !GetAtt CreateBuyRequestFunctionUrl.FunctionUrl
-Metadata:
-  AWS::Composer::Groups:
-    Group:
-      Label: Group
-      Members:
-        - ForwardBuyRequestRole
-        - CreateBuyRequestFunction
-        - BuyRequests
-        - PartitionedBuyRequests
+  CreateOpenOrderUrl:
+    Value: !GetAtt CreateOpenOrderFunctionUrl.FunctionUrl
