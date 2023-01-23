@@ -71,6 +71,7 @@ Resources:
                   - kinesis:DescribeStream
                   - kinesis:DescribeLimits
                 Resource: !GetAtt PartitionedOpenOrders.Arn
+  
   ForwardOpenOrders:
     Type: AWS::Pipes::Pipe
     Properties:
@@ -79,20 +80,20 @@ Resources:
       Source: !GetAtt OpenOrders.StreamArn
       SourceParameters:
         DynamoDBStreamParameters:
-          StartingPosition: TRIM_HORIZON
+          StartingPosition: LATEST
         FilterCriteria:
           Filters:
             - Pattern:
                 Fn::ToJsonString:
-                  data:
-                    dynamodb:
-                      NewImage: 
-                        material:
-                          S: [{ "exists": true }]
+                  dynamodb:
+                    NewImage: 
+                      material:
+                        S: [{ "exists": true }]
       Target: !GetAtt PartitionedOpenOrders.Arn
       TargetParameters:
         KinesisStreamParameters:
           PartitionKey: $.dynamodb.NewImage.material.S
+
   PartitionedOpenOrders:
     Type: AWS::Kinesis::Stream
     Properties:
