@@ -18,6 +18,7 @@ Resources:
           KeyType: RANGE
       StreamSpecification:
         StreamViewType: NEW_AND_OLD_IMAGES
+
   CreateOpenOrderFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -36,10 +37,12 @@ Resources:
             TableName: !Ref OpenOrders
       FunctionUrlConfig:
         AuthType: NONE
+
   CreateOpenOrderFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub /aws/lambda/${CreateOpenOrderFunction}
+
   ForwardOpenOrdersRole:
     Type: AWS::IAM::Role
     Properties:
@@ -99,6 +102,7 @@ Resources:
     Properties:
       StreamModeDetails:
         StreamMode: ON_DEMAND
+  
   ProcessOpenOrdersFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -139,10 +143,12 @@ Resources:
             Stream: !GetAtt PartitionedOpenOrders.Arn
             StartingPosition: TRIM_HORIZON
             BatchSize: 1
+  
   ProcessOpenOrdersFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub /aws/lambda/${ProcessOpenOrdersFunction}
+
 Outputs:
   CreateOpenOrderUrl:
     Value: !GetAtt CreateOpenOrderFunctionUrl.FunctionUrl
