@@ -1,0 +1,31 @@
+config:
+  target: "https://yqnpf2cf4rxqvk3ybsfvkgfmmq0pabfz.lambda-url.us-east-1.on.aws"
+  phases:
+    - duration: 60
+      arrivalRate: 5
+      name: Warm up
+    - duration: 120
+      arrivalRate: 5
+      rampTo: 50
+      name: Ramp up load
+    - duration: 600
+      arrivalRate: 50
+      name: Sustained load
+  payload:
+    path: "./orders.csv"
+    fields:
+      - "type"
+      - "material"
+      - "quantity"
+      - "pricePerUnit"
+
+scenarios:
+  - name: "Submit Order"
+    flow:
+      - post:
+          url: '/'
+          json:
+            type: "{{ type }}"
+            material: "{{ material }}"
+            quantity: "{{ quantity }}"
+            pricePerUnit: "{{ pricePerUnit }}"
