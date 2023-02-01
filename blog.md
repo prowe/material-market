@@ -45,6 +45,8 @@ This lambda, as discussed earlier, will never have more than one instance per `k
 It will take the order, query up the oppisite order that matches it.
 Assuming the price is good, it will decrement the quantity from both orders and delete them if they are fulfilled in one single [DynamoDB transaction](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/transaction-apis.html).
 
+<img src='./order-flow.svg' style="width: 100%; display: block" />
+
 This example is charactaristic of the challenges with *Event Driven Architecture*.
 With many asynchronous activities in-flight, coordination between events to either prevent collisions or to ensure multiple activites are atomic becomes necessary.
 By leveraging the strengths of the various services, we can solve these probems without writing and manging coordination code ourselves.
