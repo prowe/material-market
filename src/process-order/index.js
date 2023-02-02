@@ -28,6 +28,20 @@ function convertKinesisRecordToOrder(record) {
 }
 
 /**
+ * @param {OrderDynamoItem} kinesisOrder
+ * @returns {Promise<OrderDynamoItem?>}
+ */
+async function reloadOrder({material, sk}) {
+  const result = await documentClient.get({
+    TableName: process.env.TABLE_NAME,
+    Key: {material, sk},
+    ConsistentRead: true,
+  });
+  // @ts-ignore
+  return result.Item ?? undefined; 
+}
+
+/**
  * Find the Sell order record that is best for the given buy
  * @param {OrderDynamoItem} buyOrder 
  * @returns {Promise<OrderDynamoItem?>}
@@ -42,7 +56,8 @@ async function findBestSellOrderForBuy({material, pricePerUnit}) {
       ":typePrefix": 'Sell:',
       ":pricePerUnit": pricePerUnit,
     },
-    Limit: 1
+    Limit: 1,
+    ConsistentRead: true
   });
   // @ts-ignore
   return (result?.Items && result.Items[0]) ?? null;
@@ -64,7 +79,8 @@ async function findBestSellOrderForBuy({material, pricePerUnit}) {
       ":pricePerUnit": pricePerUnit,
     },
     ScanIndexForward: false,
-    Limit: 1
+    Limit: 1,
+    ConsistentRead: true
   });
   // @ts-ignore
   return (result?.Items && result.Items[0]) ?? null;
@@ -118,7 +134,11 @@ function buildTransactionOperationForOrder({quantity, material, sk}, claimedQuan
  * @param {import("aws-lambda").KinesisStreamRecord} record 
  */
 async function processRecord(record) {
-  const order = convertKinesisRecordToOrder(record);
+  const kinesisOrder = convertKinesisRecordToOrder(record);
+  if (!kinesisOrder) {
+    return;
+  }
+  const order = await reloadOrder(kinesisOrder);
   console.log("Processing order: ", JSON.stringify(order));
   if (!order) {
     return;
@@ -131,12 +151,18 @@ async function processRecord(record) {
   console.log('Found matching orders: ', JSON.stringify({buyOrder, sellOrder}));
   const claimedQuantity = Math.min(buyOrder.quantity, sellOrder.quantity);
 
-  await documentClient.executeTransaction({
-    TransactStatements: [
-      buildTransactionOperationForOrder(buyOrder, claimedQuantity),
-      buildTransactionOperationForOrder(sellOrder, claimedQuantity)
-    ]
-  });
+  const transactStatements = [
+    buildTransactionOperationForOrder(buyOrder, claimedQuantity),
+    buildTransactionOperationForOrder(sellOrder, claimedQuantity)
+  ];
+  try {
+    await documentClient.executeTransaction({
+      TransactStatements: transactStatements
+    });
+  } catch (e) {
+    e.TransactStatements = transactStatements;
+    throw e;
+  }
   console.log('completed order match');
 }
 
